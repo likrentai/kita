@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kita: Malaysia in 3.2 million dots</title>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="https://unpkg.com/deck.gl@9.1.15/dist.min.js"></script>
+<style>
+  :root {
+    --surface: #101114;
+    --panel: rgba(16, 17, 20, 0.88);
+    --text-primary: #f0efec;
+    --text-secondary: #c3c2b7;
+    --text-muted: #8d8c85;
+    --line: #2b2c30;
+    --sans: "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  html, body { margin: 0; height: 100%; background: var(--surface); color: var(--text-primary); font-family: var(--sans); }
+  #map { position: absolute; inset: 0; }
+  #story { position: absolute; top: 0; left: 0; bottom: 0; z-index: 5; width: 360px; overflow-y: auto; background: var(--panel); border-right: 1px solid var(--line); scrollbar-width: thin; scrollbar-color: #3a3b40 transparent; }
+  #panel { position: sticky; top: 0; z-index: 2; padding: 14px 20px 10px; background: rgba(16, 17, 20, 0.97); border-bottom: 1px solid var(--line); }
+  h1 { margin: 0; font-size: 24px; letter-spacing: 0.5px; display: inline; }
+  .sub { display: inline; margin-left: 8px; color: var(--text-secondary); font-size: 14px; }
+  #panel .row { margin: 8px 0; }
+  #panel button { padding: 5px 6px; font-size: 12.5px; }
+  .step { min-height: 72vh; padding: 28px 22px 0; color: var(--text-muted); font-size: 15px; line-height: 1.55; transition: color 0.4s; }
+  .step.active { color: var(--text-secondary); }
+  .step.active b { color: var(--text-primary); }
+  .step h2 { margin: 0 0 10px; font-size: 20px; line-height: 1.25; color: inherit; }
+  .step.active h2 { color: var(--text-primary); }
+  .step .kicker { margin: 0 0 4px; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); }
+  .step p { margin: 0 0 12px; }
+  .step .hint { font-size: 13px; color: var(--text-muted); }
+  .step.intro { padding-top: 34px; }
+  .step.intro .big { font-size: 22px; line-height: 1.35; }
+  .step.about { min-height: 0; padding-bottom: 60vh; font-size: 13px; }
+  .step.about h2 { font-size: 17px; }
+  .step.about ul { margin: 0 0 12px; padding-left: 18px; }
+  .step.about li { margin-bottom: 6px; }
+  .row { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+  button { flex: 1; padding: 7px 8px; font: inherit; font-size: 13px; color: var(--text-secondary); background: transparent; border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
+  button.on { color: var(--text-primary); border-color: var(--text-secondary); }
+  button:disabled { opacity: 0.4; cursor: default; }
+  #map.charts .maplibregl-canvas { opacity: var(--map-dim); transition: opacity 1.2s; }
+  #map .maplibregl-canvas { transition: opacity 1.2s; }
+  .card-panel { position: absolute; top: 16px; right: 56px; z-index: 5; width: 440px; padding: 16px 18px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; font-size: 13.5px; color: var(--text-secondary); }
+  .card-panel.hidden, svg.hidden, p.hidden { display: none; }
+  .card-panel h2 { margin: 0 0 10px; font-size: 19px; color: var(--text-primary); }
+  #draw-ask, #draw-result { margin: 6px 0; line-height: 1.45; }
+  #draw-ask b, #draw-result b { color: var(--text-primary); }
+  #draw-plot { touch-action: none; cursor: crosshair; }
+  .card-panel svg { user-select: none; -webkit-user-select: none; }
+  .ex-head { margin: 10px 0 2px; color: var(--text-primary); font-weight: 600; }
+  .ex-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; }
+  .ex-grid label { justify-content: flex-start; margin: 2px 0; cursor: pointer; }
+  .ex-grid .sw { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .ex-seg { margin: 4px 0; }
+  .ex-ages input { width: 100%; margin: 2px 0; accent-color: #eed6a8; }
+  #ex-count { margin: 8px 0 4px; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+  #explore input[list] { width: 210px; padding: 5px 7px; font: inherit; color: var(--text-primary); background: #1a1b1f; border: 1px solid var(--line); border-radius: 6px; }
+  #draw svg text { font-family: var(--sans); font-size: 11px; fill: var(--text-muted); }
+  #stand label { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: 6px 0; }
+  #stand select, #stand input[type=number] { width: 210px; padding: 5px 7px; font: inherit; color: var(--text-primary); background: #1a1b1f; border: 1px solid var(--line); border-radius: 6px; }
+  #stand input[type=range] { width: 100%; margin: 8px 0 4px; accent-color: #eed6a8; }
+  #stand-result { margin: 8px 0 4px; font-size: 15px; line-height: 1.4; color: var(--text-primary); }
+  #stand-result b { color: #eed6a8; }
+  #stand-context { margin: 2px 0 0; line-height: 1.4; }
+  .card-panel svg text { font-family: var(--sans); font-size: 11px; fill: var(--text-muted); }
+  #legend { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; margin: 6px 0 0; padding: 0; list-style: none; font-size: 12px; }
+  #legend li { display: flex; align-items: center; gap: 6px; padding: 2px 3px; border-radius: 4px; cursor: pointer; color: var(--text-secondary); }
+  #legend li:hover { background: #1c1d21; }
+  #legend li.dim { opacity: 0.35; }
+  #legend .sw { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  #legend .n { margin-left: auto; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  #legend.hidden { display: none; }
+  #status { margin-top: 6px; font-size: 11.5px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .note { margin-top: 8px; font-size: 11.5px; line-height: 1.4; color: var(--text-muted); }
+  .card { font-family: var(--sans); font-size: 12.5px; line-height: 1.45; color: var(--text-secondary); }
+  .card b { color: var(--text-primary); font-size: 13.5px; }
+  .card .where { color: var(--text-muted); }
+  .card .bar { display: flex; height: 6px; margin: 6px 0 4px; border-radius: 3px; overflow: hidden; gap: 1px; }
+  .card .row2 { display: flex; justify-content: space-between; gap: 14px; font-variant-numeric: tabular-nums; }
+  .card .k { display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; }
+  @media (max-width: 700px) {
+    #story { top: auto; right: 0; width: auto; height: 46vh; border-right: none; border-top: 1px solid var(--line); transition: height 0.4s; }
+    body.card-open #story { height: 24vh; }
+    #panel { padding: 8px 12px 6px; }
+    h1 { font-size: 19px; }
+    .sub { font-size: 12.5px; }
+    #panel .row { margin: 5px 0; gap: 4px; }
+    #layout-row { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+    #layout-row button { flex: none; }
+    #panel button { padding: 4px 7px; font-size: 12px; }
+    #status { display: none; }
+    #legend { font-size: 11px; }
+    .step { min-height: 34vh; padding: 16px 14px 0; font-size: 14px; line-height: 1.5; }
+    .step h2 { font-size: 17px; }
+    .step.intro .big { font-size: 17px; }
+    .step.about { padding-bottom: 30vh; }
+    .card-panel { top: 8px; left: 8px; right: 8px; width: auto; max-height: calc(76vh - 24px); overflow-y: auto; padding: 12px 12px; font-size: 13px; }
+    .card-panel h2 { font-size: 16px; }
+    #stand select, #stand input[type=number], #explore input[list] { width: 150px; }
+    .maplibregl-ctrl-top-right { display: none; }
+  }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="story">
+<div id="panel">
+  <h1>Kita</h1><span class="sub">Malaysia in 3.2 million dots</span>
+  <div class="row">
+    <button id="mode-all" class="on">Everyone</button>
+    <button id="mode-group">By group</button>
+  </div>
+  <div class="row" id="layout-row">
+    <button id="lay-map" class="on">Map</button>
+    <button id="lay-pyramid" disabled>Pyramid</button>
+    <button id="lay-urban" disabled>Urban / rural</button>
+    <button id="lay-draw" disabled>Districts</button>
+    <button id="lay-stand" disabled>Income</button>
+    <button id="lay-explore" disabled>Explore</button>
+  </div>
+  <ul id="legend" class="hidden"></ul>
+  <div id="status">Loading...</div>
+</div>
+
+<section class="step intro" data-layout="map" data-mode="all" data-view="country">
+  <p class="big">In 2020 the census counted <b>32.4 million people</b> in Malaysia. Here they are, one dot for every ten people.</p>
+  <p>That is 3.24 million dots, each placed in the state constituency where those people live. They are modelled positions, not addresses.</p>
+  <p class="hint">Scroll to read on. The buttons at the top jump straight to any part.</p>
+</section>
+
+<section class="step" data-layout="map" data-mode="all" data-view="country">
+  <p class="kicker">1 &middot; The country in dots</p>
+  <h2>Half of everyone lives on about 2% of the land</h2>
+  <p>The bright band runs down the west coast of the peninsula, from Alor Setar through Penang, Ipoh and Kuala Lumpur to Johor Bahru. Inland, the dots thin out into forest and plantation.</p>
+</section>
+
+<section class="step" data-layout="map" data-mode="all" data-view="klang">
+  <h2>The Klang Valley alone holds 28% of the people</h2>
+  <p>Selangor, Kuala Lumpur and Putrajaya together: about <b>9 million people on 2.5% of the land</b>. The core stays solid because it really is that dense; zoom in at the edges and single dots appear.</p>
+  <p class="hint">Point at any area for its census numbers.</p>
+</section>
+
+<section class="step" data-layout="map" data-mode="all" data-view="borneo">
+  <h2>Sabah and Sarawak: 60% of the land, 18% of the people</h2>
+  <p>Across the South China Sea, people follow the coast and the big rivers. Kuching, Sibu, Miri, Kota Kinabalu, Sandakan and Tawau light up; the interior is mostly dark.</p>
+</section>
+
+<section class="step" data-layout="map" data-mode="group" data-view="country">
+  <p class="kicker">2 &middot; Who lives where</p>
+  <h2>Six groups, coloured</h2>
+  <p>Malay <b>52%</b>, Chinese <b>21%</b>, Other Bumiputera <b>11%</b>, Indian <b>6%</b>, Other citizens under 1%, and Non-citizens <b>8%</b> of everyone counted.</p>
+  <p>Malay dots fill most of the peninsula's north and east coast; Other Bumiputera dominate Sabah and Sarawak; Chinese and Indian dots gather in the west coast towns.</p>
+  <p class="hint">Click a group in the list above to show it alone.</p>
+</section>
+
+<section class="step" data-layout="map" data-mode="group" data-view="klang">
+  <h2>In the Klang Valley the colours mix</h2>
+  <p>No group is far from any other here, but the mix still changes from one constituency to the next.</p>
+  <p class="hint">Within each constituency the groups are scattered at random among its dots, so look at the mix of areas, not of streets.</p>
+</section>
+
+<section class="step" data-layout="map" data-mode="group" data-view="sabah" data-only="5">
+  <h2>About one in four people in Sabah is a non-citizen</h2>
+  <p>Non-citizens are 2.7 million people, 8% of everyone, but about <b>24% of Sabah's 3.4 million</b>. The census counts everyone living in the country, so they are part of every total on this page.</p>
+</section>
+
+<section class="step" data-layout="pyramid" data-mode="group">
+  <p class="kicker">3 &middot; The dots leave the map</p>
+  <h2>Line everyone up by age</h2>
+  <p>Men to the left, women to the right, youngest at the bottom. The widest bands are people aged <b>25 to 34</b>, about 2.9 million in each five-year band.</p>
+  <p>Children under 15 are <b>24%</b> of everyone; people aged 65 and over are <b>6.7%</b>. The base is narrower than the middle: fewer babies are born now than a generation ago.</p>
+</section>
+
+<section class="step" data-layout="urban" data-mode="group">
+  <h2>Three in four live in urban areas</h2>
+  <p><b>24.4 million</b> people in urban areas, <b>8.1 million</b> in rural ones. Urban or rural comes from district counts, so it is modelled for each dot.</p>
+</section>
+
+<section class="step" data-layout="draw" data-mode="all">
+  <p class="kicker">4 &middot; Income, district by district</p>
+  <h2>First, a guess</h2>
+  <p>Each district has a median household income: half its households earn less. On the card to the right, <b>draw how you think the 160 medians rise</b> from the poorest district to the richest, then press <b>Show me</b>.</p>
+  <p class="hint">The real curve, and every district as a dot, appear after your guess.</p>
+</section>
+
+<section class="step" data-layout="stand" data-mode="all">
+  <p class="kicker">5 &middot; Where do you stand?</p>
+  <h2>Put your own household on the chart</h2>
+  <p>Pick a district and type a monthly household income. The card shows how many households in that state earn less, as 100 dots of 1% each.</p>
+  <p class="hint">Percentiles are published for states, not districts, so the comparison is with the whole state.</p>
+</section>
+
+<section class="step" data-layout="explore" data-mode="group">
+  <p class="kicker">6 &middot; Explore</p>
+  <h2>Your turn</h2>
+  <p>Filter the dots by group, sex, urban or rural, and age, and find any district by name. The count tells you how many people are left on the map.</p>
+  <p class="hint">Try the oldest age bands alone, or rural women.</p>
+</section>
+
+<section class="step about" data-layout="explore" data-mode="group">
+  <h2>About this page</h2>
+  <ul>
+    <li><b>People and places:</b> Census 2020 by state constituency and district, Department of Statistics Malaysia (DOSM), open data on GitHub (dosm-malaysia/data-open).</li>
+    <li><b>Income:</b> Household Income Survey 2022, district medians and state percentiles, OpenDOSM.</li>
+    <li><b>Where inside each area:</b> Kontur population grid (400 m hexagons, 2023) sets where dots fall within each constituency.</li>
+    <li><b>Method:</b> 1 dot = 10 people. Group, sex, age and urban or rural are drawn from the published tables for each area and mixed at random among its dots. Dots show patterns across areas, never individual homes.</li>
+    <li>Basemap &copy; CARTO, &copy; OpenStreetMap contributors. Built with MapLibre and deck.gl.</li>
+  </ul>
+</section>
+</div>
+<div id="draw" class="card-panel hidden">
+  <h2>How far apart are Malaysia's districts?</h2>
+  <p id="draw-ask">Each of the 160 districts has a median household income: half its households earn less. The poorest district is drawn for you. <b>Drag across the chart</b> to draw how you think the medians rise from the poorest district to the richest.</p>
+  <svg id="draw-plot" viewBox="0 0 420 230" role="img" aria-label="Draw your guess of district median incomes, poorest to richest"></svg>
+  <div class="row"><button id="draw-show" disabled>Show me</button><button id="draw-reset">Draw again</button></div>
+  <p id="draw-result"></p>
+  <svg id="draw-swarm" class="hidden" viewBox="0 0 420 150" role="img" aria-label="Beeswarm of 160 district median incomes"></svg>
+  <p id="draw-legend" class="note hidden"></p>
+</div>
+<div id="explore" class="card-panel hidden">
+  <h2>Explore</h2>
+  <label>Find a district <input id="ex-find" list="ex-districts" placeholder="Type a name"></label>
+  <datalist id="ex-districts"></datalist>
+  <div class="ex-head">Groups</div>
+  <div id="ex-groups" class="ex-grid"></div>
+  <div class="ex-head">Sex</div>
+  <div class="row ex-seg" id="ex-sex"><button data-v="all" class="on">All</button><button data-v="0">Men</button><button data-v="1">Women</button></div>
+  <div class="ex-head">Where</div>
+  <div class="row ex-seg" id="ex-urban"><button data-v="all" class="on">All</button><button data-v="1">Urban</button><button data-v="0">Rural</button></div>
+  <div class="ex-head">Age <span id="ex-age-label"></span></div>
+  <div class="ex-ages"><input id="ex-age-min" type="range" min="0" max="17" value="0" aria-label="Youngest age band"><input id="ex-age-max" type="range" min="0" max="17" value="17" aria-label="Oldest age band"></div>
+  <p id="ex-count"></p>
+  <div class="row"><button id="ex-reset">Reset filters</button></div>
+  <p class="note">Filters work on the modelled dots: groups, sex and age come from district tables, urban or rural from district counts. With a filter on, the map shows live dots at every zoom.</p>
+</div>
+<div id="stand" class="card-panel hidden">
+  <h2>Where do you stand?</h2>
+  <label>District <select id="stand-district"></select></label>
+  <label>Household income, RM a month <input id="stand-income" type="number" min="0" step="100" value="5000"></label>
+  <input id="stand-slider" type="range" min="0" max="1000" value="500" aria-label="Household income">
+  <p id="stand-result"></p>
+  <svg id="stand-plot" viewBox="0 0 420 190" role="img" aria-label="Quantile dot plot of household income in the state"></svg>
+  <p id="stand-context"></p>
+  <p class="note">Each dot is 1% of households in the state, placed at that hundredth's median income. Gross monthly household income, Household Income Survey 2022 (DOSM). Percentiles are published for states, not districts. Incomes have risen since 2022.</p>
+</div>
+<script>
+// ===================== SETTINGS =====================
+const SETTINGS = {
+  dataDir: "data/",                                   // <- folder with dots_index.json and the chunk files
+  basemap: "https://basemaps.cartocdn.com/gl/dark-matter-nolabels-gl-style/style.json",   // <- dark basemap without labels
+  view: { longitude: 109.3, latitude: 4.2, zoom: 5.0 }, // <- starting view before the data arrive
+  fitPadding: { top: 40, right: 40, bottom: 40, left: 400 }, // <- once the data arrive, fit the whole country, leaving room for the panel on the left
+  radiusMetres: 35,                                   // VISUAL: dot size on the ground; dots grow when zooming in
+  radiusMinPixels: 0.5,                               // VISUAL: smallest dot on screen
+  radiusMaxPixels: 4,                                 // VISUAL: largest dot on screen
+  opacityAtZoom5: 0.02,                               // VISUAL: dot opacity at the whole-country view (low, so dense places glow brighter)
+  opacityGrowth: 2.0,                                 // VISUAL: opacity multiplies by this for each zoom level in
+  opacityMax: 0.9,                                    // VISUAL: highest dot opacity when zoomed in
+  colourAll: [238, 214, 168],                         // VISUAL: warm sand colour for "Everyone"
+  colourDimmed: [70, 70, 74],                         // VISUAL: colour of groups switched off
+  // Group colours live in 02builddots Section 0 (GROUP_COLOURS); the page reads them from dots_index.json
+  overviewUntilZoom: 6.5,                             // VISUAL: below this zoom the page shows the whole-country image only
+  dotsFromZoom: 7.5,                                  // VISUAL: above this zoom the page shows live dots only (in between they cross-fade)
+  overviewOpacity: 1.0,                               // VISUAL: strength of the whole-country image
+  townTier2Zoom: 6.5,                                 // VISUAL: zoom at which tier 2 towns appear
+  townTier3Zoom: 8.5,                                 // VISUAL: zoom at which tier 3 towns appear
+  townSize: [15, 13, 12],                             // VISUAL: label size (pixels) for tiers 1, 2, 3
+  townColour: [240, 239, 236],                        // VISUAL: label colour
+  townBackground: [16, 17, 20, 205],                  // VISUAL: dark box behind each label so it reads over bright dots
+  hoverFill: [255, 255, 255, 28],                     // VISUAL: tint of the area under the mouse
+  everyoneOpacityFactor: 0.3,                         // VISUAL: "Everyone" dots are this much fainter than group dots, so busy places keep some texture
+  morphMs: 2600,                                      // VISUAL: time for the dots to fly between the map and a chart (milliseconds)
+  chartBox: [102.5, -0.6, 115.5, 8.6],                // <- where the charts are drawn (west, south, east, north in degrees)
+  chartOpacity: 0.10,                                 // VISUAL: dot opacity in the charts
+  chartMapDim: 0.25,                                  // VISUAL: basemap brightness behind the charts (1 = normal)
+  chartLabelColour: [195, 194, 183],                  // VISUAL: colour of chart labels
+  standDefault: "W.P. Kuala Lumpur|W.P. Kuala Lumpur", // <- district picked first in "Where do you stand?" (state|district)
+  standIncome: 5000,                                  // <- income shown first (RM a month)
+  standRange: [1000, 100000],                         // <- income range of the slider and the plot (RM a month, log scale)
+  standBelow: "#eed6a8",                              // VISUAL: dots for households earning less than the reader
+  standAbove: "#4a4b50",                              // VISUAL: dots for households earning more
+  standPadding: { top: 60, bottom: 60, left: 400, right: 520 }, // <- room for the panels when flying to a district
+  drawBins: 40,                                       // <- the guess is drawn in this many steps (160 districts / 40 = 4 districts a step)
+  drawMax: 14000,                                     // <- top of the income axis in "You draw it" (RM)
+  drawNeeded: 0.7,                                    // <- share of the chart the reader must draw before "Show me" works
+  drawGuess: "#eed6a8",                               // VISUAL: colour of the reader's line
+  drawReal: "#f0efec",                                // VISUAL: colour of the real line
+  exploreBoostMax: 4,                                 // VISUAL: with a filter on, dots get up to this much stronger, so a small selection stays visible
+  swarmColours: { peninsula: "#eed6a8", borneo: "#7fb2d9" }, // VISUAL: beeswarm dots for Peninsular Malaysia and for Sabah, Sarawak and Labuan
+  storyViews: {                                       // <- places the story flies to (west, south, east, north in degrees)
+    klang: [101.25, 2.75, 101.95, 3.40],
+    borneo: [109.5, 0.85, 119.3, 7.4],
+    sabah: [115.3, 4.1, 119.3, 7.4],
+  },
+  phoneWidth: 700,                                    // <- below this screen width the story becomes a sheet at the bottom (match the @media rule in the style block)
+  storyFlyMs: 2200,                                   // VISUAL: time for the map to fly between story views (milliseconds)
+  storyTrigger: "-45% 0px -50% 0px",                  // <- a step starts when it crosses this band of the story column (middle of the screen)
+};
+// ====================================================
+
+const hexToRgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+let groupRgb = [];
+const state = { mode: "all", hidden: new Set(), chunks: [], index: null, loaded: 0, towns: [], areas: null, layout: "map", colourVersion: 0, chartLabels: {} };
+
+const map = new maplibregl.Map({ container: "map", style: SETTINGS.basemap, center: [SETTINGS.view.longitude, SETTINGS.view.latitude], zoom: SETTINGS.view.zoom, attributionControl: { compact: true } });
+map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+const overlay = new deck.MapboxOverlay({ interleaved: false, layers: [], getTooltip: info => card(info) });
+map.addControl(overlay);
+map.on("load", () => map.resize());
+new ResizeObserver(() => map.resize()).observe(document.getElementById("map"));
+
+function passes(chunk, i) {
+  // true when the dot meets the Explore filters (always true outside Explore)
+  if (state.layout !== "explore") {
+    return true;
+  }
+  const f = state.filter;
+  const g = chunk.attr[i * 4];
+  const s = chunk.attr[i * 4 + 1];
+  const a = chunk.attr[i * 4 + 2];
+  const u = chunk.attr[i * 4 + 3];
+  if (!f.groups.has(g)) {
+    return false;
+  }
+  if (f.sex !== "all" && +f.sex !== s) {
+    return false;
+  }
+  if (f.urban !== "all" && +f.urban !== u) {
+    return false;
+  }
+  return a >= f.ageMin && a <= f.ageMax;
+}
+
+function paint(chunk) {
+  const n = chunk.count;
+  const colours = new Uint8Array(n * 4);
+  const alpha = 255;
+  let shown = 0;
+  for (let i = 0; i < n; i++) {
+    const g = chunk.attr[i * 4];
+    if (!passes(chunk, i)) {
+      continue;
+    }
+    shown += 1;
+    let c = SETTINGS.colourAll;
+    if (state.mode === "group") {
+      c = state.hidden.has(g) ? SETTINGS.colourDimmed : groupRgb[g];
+    }
+    colours[i * 4] = c[0];
+    colours[i * 4 + 1] = c[1];
+    colours[i * 4 + 2] = c[2];
+    colours[i * 4 + 3] = state.mode === "group" && state.hidden.has(g) ? Math.round(alpha * 0.35) : alpha;
+  }
+  chunk.colours = colours;
+  chunk.shown = shown;
+}
+
+function isPhone() {
+  return window.innerWidth <= SETTINGS.phoneWidth;
+}
+
+function safePadding(p) {
+  if (isPhone()) {
+    const sheet = document.getElementById("story").offsetHeight;
+    return { top: 16, left: 16, right: 16, bottom: sheet + 16 };
+  }
+  // shrink the side padding on narrow screens so the map never gets less than a third of the width
+  const w = document.getElementById("map").clientWidth;
+  const room = w - p.left - p.right;
+  const minRoom = w / 3;
+  if (room >= minRoom) {
+    return p;
+  }
+  const k = Math.max(0, (w - minRoom) / (p.left + p.right));
+  return { top: p.top, bottom: p.bottom, left: Math.round(p.left * k), right: Math.round(p.right * k) };
+}
+
+function mapLike() {
+  return state.layout === "map" || state.layout === "stand" || state.layout === "draw" || state.layout === "explore";
+}
+
+function dotOpacity() {
+  const z = map.getZoom();
+  if (!mapLike()) {
+    return SETTINGS.chartOpacity * (state.mode === "all" ? SETTINGS.everyoneOpacityFactor * 2 : 1);
+  }
+  let base = Math.min(SETTINGS.opacityMax, SETTINGS.opacityAtZoom5 * Math.pow(SETTINGS.opacityGrowth, z - 5));
+  if (filterActive()) {
+    base = Math.min(SETTINGS.opacityMax, base * Math.min(SETTINGS.exploreBoostMax, 1 / Math.sqrt(Math.max(shownShare(), 0.01))));
+  }
+  return state.mode === "all" ? base * SETTINGS.everyoneOpacityFactor : base;
+}
+
+function filterActive() {
+  if (state.layout !== "explore") {
+    return false;
+  }
+  const f = state.filter;
+  return f.groups.size < 6 || f.sex !== "all" || f.urban !== "all" || f.ageMin > 0 || f.ageMax < 17;
+}
+
+function shownShare() {
+  const total = state.chunks.reduce((s, c) => s + c.count, 0);
+  const shown = state.chunks.reduce((s, c) => s + (c.shown || 0), 0);
+  return total > 0 ? shown / total : 1;
+}
+
+function fadeToDots() {
+  if (!mapLike() || filterActive()) {
+    return 1;
+  }
+  const z = map.getZoom();
+  const t = (z - SETTINGS.overviewUntilZoom) / (SETTINGS.dotsFromZoom - SETTINGS.overviewUntilZoom);
+  return Math.max(0, Math.min(1, t));
+}
+
+function overviewLayers(f) {
+  if (!state.index || f >= 1) {
+    return [];
+  }
+  const ov = state.index.overview;
+  const smooth = { minFilter: "linear", magFilter: "linear", mipmapFilter: "linear", addressModeU: "clamp-to-edge", addressModeV: "clamp-to-edge" };
+  const base = { bounds: ov.bounds, opacity: SETTINGS.overviewOpacity * (1 - f), textureParameters: smooth, parameters: { depthTest: false } };
+  const onlyOne = state.hidden.size === state.index.groups.length - 1;
+  if (state.mode === "all") {
+    return [new deck.BitmapLayer({ ...base, id: "ov-all", image: SETTINGS.dataDir + "overview_all.png", tintColor: SETTINGS.colourAll })];
+  }
+  if (!onlyOne) {
+    return [new deck.BitmapLayer({ ...base, id: "ov-mix", image: SETTINGS.dataDir + "overview_mix.png" })];
+  }
+  const g = state.index.groups.findIndex((_, i) => !state.hidden.has(i));
+  return [
+    new deck.BitmapLayer({ ...base, id: "ov-context", image: SETTINGS.dataDir + "overview_all.png", tintColor: SETTINGS.colourDimmed, opacity: base.opacity * 0.6 }),
+    new deck.BitmapLayer({ ...base, id: "ov-g" + g, image: SETTINGS.dataDir + "overview_g" + g + ".png", tintColor: groupRgb[g] }),
+  ];
+}
+
+function placeLayers() {
+  const z = map.getZoom();
+  const wanted = state.towns.filter(d => d.tier === 1 || (d.tier === 2 && z >= SETTINGS.townTier2Zoom) || (d.tier === 3 && z >= SETTINGS.townTier3Zoom));
+  const shown = keepApart(wanted);
+  const layers = [];
+  if (state.areas) {
+    layers.push(new deck.GeoJsonLayer({
+      id: "areas",
+      data: state.areas,
+      pickable: true,
+      stroked: false,
+      filled: true,
+      getFillColor: [0, 0, 0, 0],
+      autoHighlight: true,
+      highlightColor: SETTINGS.hoverFill,
+      parameters: { depthTest: false },
+    }));
+  }
+  layers.push(new deck.TextLayer({
+    id: "towns",
+    data: shown,
+    getPosition: d => [d.lon, d.lat],
+    getText: d => d.name,
+    getSize: d => SETTINGS.townSize[d.tier - 1],
+    getColor: SETTINGS.townColour,
+    fontFamily: "Segoe UI, Helvetica, Arial, sans-serif",
+    fontWeight: 600,
+    background: true,
+    getBackgroundColor: SETTINGS.townBackground,
+    backgroundPadding: [5, 2],
+    getTextAnchor: "middle",
+    getAlignmentBaseline: "center",
+    parameters: { depthTest: false },
+    updateTriggers: { getSize: SETTINGS.townSize },
+  }));
+  return layers;
+}
+
+function keepApart(list) {
+  // Drop labels that would overlap one already placed; bigger towns (lower tier, earlier in the list) go first
+  const placed = [];
+  const out = [];
+  for (const d of list) {
+    const p = map.project([d.lon, d.lat]);
+    const size = SETTINGS.townSize[d.tier - 1];
+    const w = d.name.length * size * 0.58 + 12;
+    const h = size + 8;
+    const box = [p.x - w / 2, p.y - h / 2, p.x + w / 2, p.y + h / 2];
+    const clash = placed.some(b => box[0] < b[2] && box[2] > b[0] && box[1] < b[3] && box[3] > b[1]);
+    if (!clash) {
+      placed.push(box);
+      out.push(d);
+    }
+  }
+  return out;
+}
+
+const SHARES = [["s_bumi", "Bumiputera", 0], ["s_chinese", "Chinese", 2], ["s_indian", "Indian", 3], ["s_other", "Other citizens", 4], ["s_noncit", "Non-citizens", 5]];
+
+function card(info) {
+  const p = info.object && info.object.properties;
+  if (!p) {
+    return null;
+  }
+  const colour = i => state.index ? state.index.group_colours[i] : "#888";
+  const bar = SHARES.map(([k, , g]) => `<span style="width:${p[k]}%;background:${colour(g)}"></span>`).join("");
+  const rows = SHARES.filter(([k]) => p[k] >= 0.5).map(([k, label, g]) => `<div class="row2"><span><span class="k" style="background:${colour(g)}"></span>${label}</span><span>${p[k].toFixed(0)}%</span></div>`).join("");
+  const where = [p.seat, p.state].filter(Boolean).join(", ");
+  const html = `<div class="card"><b>${p.name}</b><div class="where">${where}</div><div>${Math.round(p.pop).toLocaleString()} people, ${Math.round(p.hh).toLocaleString()} households</div><div class="bar">${bar}</div>${rows}<div class="where" style="margin-top:4px">Census 2020, whole area. Bumiputera includes Malay and other Bumiputera.</div></div>`;
+  return { html, style: { background: "rgba(16,17,20,0.94)", border: "1px solid #2b2c30", borderRadius: "8px", padding: "9px 11px", maxWidth: "260px" } };
+}
+
+function render() {
+  const f = fadeToDots();
+  const dotLayers = f <= 0 ? [] : state.chunks.map((c, k) => new deck.ScatterplotLayer({
+    id: "dots-" + k,
+    data: c.data,
+    getPosition: (_, { index }) => {
+      const src = mapLike() ? c.pos : c.targets[state.layout];
+      c.tmp2[0] = src[index * 2];
+      c.tmp2[1] = src[index * 2 + 1];
+      return c.tmp2;
+    },
+    getFillColor: (_, { index }) => {
+      c.tmp4[0] = c.colours[index * 4];
+      c.tmp4[1] = c.colours[index * 4 + 1];
+      c.tmp4[2] = c.colours[index * 4 + 2];
+      c.tmp4[3] = c.colours[index * 4 + 3];
+      return c.tmp4;
+    },
+    updateTriggers: { getPosition: mapLike() ? "map" : state.layout, getFillColor: state.colourVersion },
+    transitions: { getPosition: { duration: SETTINGS.morphMs, easing: t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2) } },
+    opacity: dotOpacity() * f,
+    radiusUnits: "meters",
+    getRadius: SETTINGS.radiusMetres,
+    radiusMinPixels: SETTINGS.radiusMinPixels,
+    radiusMaxPixels: SETTINGS.radiusMaxPixels,
+    stroked: false,
+    antialiasing: true,
+    parameters: { depthTest: false },
+  }));
+  const extras = mapLike() ? placeLayers() : chartLabelLayers();
+  overlay.setProps({ layers: [...overviewLayers(f), ...dotLayers, ...extras] });
+}
+
+function repaintAll() {
+  state.chunks.forEach(paint);
+  state.colourVersion += 1;
+  render();
+}
+
+// ===================== CHARTS (step 3) =====================
+// Every dot gets a place in each chart; deck.gl then moves the dots smoothly from the map to the chart and back.
+
+function rand01(i) {
+  // repeatable "random" number in [0, 1) from an index
+  const x = Math.sin(i * 12.9898 + 78.233) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+function buildCharts() {
+  const ages = state.index.ages.length;
+  const groups = state.index.groups.length;
+  const [W0, S0, E0, N0] = SETTINGS.chartBox;
+  const width = E0 - W0;
+  const height = N0 - S0;
+  // ---- counts
+  const pyr = new Float64Array(2 * ages * groups);
+  const urb = new Float64Array(2 * groups);
+  for (const c of state.chunks) {
+    for (let i = 0; i < c.count; i++) {
+      const g = c.attr[i * 4];
+      const s = c.attr[i * 4 + 1];
+      const a = c.attr[i * 4 + 2];
+      const u = c.attr[i * 4 + 3];
+      pyr[(s * ages + a) * groups + g] += 1;
+      urb[u * groups + g] += 1;
+    }
+  }
+  // ---- age pyramid: one row per five-year band, men to the left, women to the right, groups stacked from the centre out
+  let maxRow = 0;
+  for (let s = 0; s < 2; s++) {
+    for (let a = 0; a < ages; a++) {
+      let rowTotal = 0;
+      for (let g = 0; g < groups; g++) {
+        rowTotal += pyr[(s * ages + a) * groups + g];
+      }
+      maxRow = Math.max(maxRow, rowTotal);
+    }
+  }
+  const pyrStart = new Float64Array(2 * ages * groups);
+  for (let s = 0; s < 2; s++) {
+    for (let a = 0; a < ages; a++) {
+      let acc = 0;
+      for (let g = 0; g < groups; g++) {
+        pyrStart[(s * ages + a) * groups + g] = acc;
+        acc += pyr[(s * ages + a) * groups + g];
+      }
+    }
+  }
+  const pyrSeen = new Float64Array(2 * ages * groups);
+  const centreX = W0 + width / 2;
+  const gap = width * 0.035;
+  const halfW = width / 2 - gap;
+  const rowH = height * 0.9 / ages;
+  const pyrBottom = S0 + height * 0.04;
+  // ---- urban and rural: two blocks of equal width, filled row by row, groups as horizontal bands
+  const blockW = width * 0.3;
+  const blockGap = width * 0.12;
+  const uLeft = [centreX + blockGap / 2, centreX - blockGap / 2 - blockW];
+  const urbTotal = [0, 0];
+  for (let u = 0; u < 2; u++) {
+    for (let g = 0; g < groups; g++) {
+      urbTotal[u] += urb[u * groups + g];
+    }
+  }
+  const perUnit = Math.max(urbTotal[0], urbTotal[1]) / (height * 0.9);
+  const urbStart = new Float64Array(2 * groups);
+  for (let u = 0; u < 2; u++) {
+    let acc = 0;
+    for (let g = 0; g < groups; g++) {
+      urbStart[u * groups + g] = acc;
+      acc += urb[u * groups + g];
+    }
+  }
+  const urbSeen = new Float64Array(2 * groups);
+  const cols = 900;
+  let k = 0;
+  for (const c of state.chunks) {
+    const tp = new Float32Array(c.count * 2);
+    const tu = new Float32Array(c.count * 2);
+    for (let i = 0; i < c.count; i++, k++) {
+      const g = c.attr[i * 4];
+      const s = c.attr[i * 4 + 1];
+      const a = c.attr[i * 4 + 2];
+      const u = c.attr[i * 4 + 3];
+      const key = (s * ages + a) * groups + g;
+      const rank = pyrStart[key] + pyrSeen[key];
+      pyrSeen[key] += 1;
+      const off = (rank + rand01(k)) / maxRow * halfW;
+      tp[i * 2] = s === 0 ? centreX - gap - off : centreX + gap + off;
+      tp[i * 2 + 1] = pyrBottom + (a + 0.08 + 0.84 * rand01(k + 7)) * rowH;
+      const ukey = u * groups + g;
+      const ur = urbStart[ukey] + urbSeen[ukey];
+      urbSeen[ukey] += 1;
+      const row = Math.floor(ur / cols);
+      const col = ur - row * cols;
+      tu[i * 2] = uLeft[u] + (col + rand01(k + 3)) / cols * blockW;
+      tu[i * 2 + 1] = S0 + height * 0.04 + (row * cols + rand01(k + 5) * cols) / cols / perUnit * cols;
+    }
+    c.targets = { pyramid: tp, urban: tu };
+  }
+  // ---- labels
+  const L = [];
+  const lab = (text, x, y, size, anchor) => L.push({ text, pos: [x, y], size, anchor: anchor || "middle" });
+  for (let a = 0; a < ages; a += 2) {
+    lab(state.index.ages[a], centreX, pyrBottom + (a + 0.5) * rowH, 11);
+  }
+  lab("Men", centreX - gap - halfW * 0.5, pyrBottom + ages * rowH + rowH * 0.6, 14);
+  lab("Women", centreX + gap + halfW * 0.5, pyrBottom + ages * rowH + rowH * 0.6, 14);
+  const ppd = state.index.people_per_dot;
+  lab(`widest band: ${(maxRow * ppd / 1e6).toFixed(2)} million people`, centreX + gap + halfW, pyrBottom - rowH * 0.6, 11, "end");
+  state.chartLabels.pyramid = L.slice();
+  L.length = 0;
+  const share = u => Math.round(100 * urbTotal[u] / (urbTotal[0] + urbTotal[1]));
+  const topOf = u => S0 + height * 0.04 + urbTotal[u] / perUnit;
+  lab(`Rural  ${(urbTotal[0] * ppd / 1e6).toFixed(1)} m (${share(0)}%)`, uLeft[0] + blockW / 2, topOf(0) + rowH * 0.6, 14);
+  lab(`Urban  ${(urbTotal[1] * ppd / 1e6).toFixed(1)} m (${share(1)}%)`, uLeft[1] + blockW / 2, topOf(1) + rowH * 0.6, 14);
+  state.chartLabels.urban = L.slice();
+  document.getElementById("lay-pyramid").disabled = false;
+  document.getElementById("lay-urban").disabled = false;
+}
+
+function chartLabelLayers() {
+  return [new deck.TextLayer({
+    id: "chart-labels-" + state.layout,
+    data: state.chartLabels[state.layout] || [],
+    getPosition: d => d.pos,
+    getText: d => d.text,
+    getSize: d => d.size,
+    getColor: SETTINGS.chartLabelColour,
+    getTextAnchor: d => d.anchor,
+    getAlignmentBaseline: "center",
+    fontFamily: "Segoe UI, Helvetica, Arial, sans-serif",
+    fontWeight: 600,
+    background: true,
+    getBackgroundColor: SETTINGS.townBackground,
+    backgroundPadding: [4, 2],
+    parameters: { depthTest: false },
+  })];
+}
+
+function setLayout(layout) {
+  if (layout === state.layout) {
+    return;
+  }
+  const wasMap = mapLike();
+  const wasExplore = state.layout === "explore";
+  state.layout = layout;
+  ["map", "pyramid", "urban", "draw", "stand", "explore"].forEach(l => document.getElementById("lay-" + l).classList.toggle("on", l === layout));
+  document.getElementById("explore").classList.toggle("hidden", layout !== "explore");
+  document.getElementById("stand").classList.toggle("hidden", layout !== "stand");
+  document.getElementById("draw").classList.toggle("hidden", layout !== "draw");
+  document.body.classList.toggle("card-open", layout === "draw" || layout === "stand" || layout === "explore");
+  const el = document.getElementById("map");
+  el.style.setProperty("--map-dim", SETTINGS.chartMapDim);
+  el.classList.toggle("charts", !mapLike());
+  if (layout === "stand") {
+    updateStand(true);
+    render();
+    return;
+  }
+  if (layout === "explore" || wasExplore) {
+    repaintAll();
+    updateExploreCount();
+  }
+  if (layout === "explore") {
+    render();
+    return;
+  }
+  if (layout === "draw") {
+    const b = state.index.bounds;
+    map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: safePadding(SETTINGS.standPadding), duration: 1800 });
+    drawChart();
+    render();
+    return;
+  }
+  if (!mapLike() && wasMap) {
+    state.mapView = { center: map.getCenter(), zoom: map.getZoom() };
+
+    const b = SETTINGS.chartBox;
+    map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: safePadding(SETTINGS.fitPadding), duration: SETTINGS.morphMs * 0.6 });
+  }
+  if (layout === "map" && state.mapView && !wasMap) {
+    map.easeTo({ center: state.mapView.center, zoom: state.mapView.zoom, duration: SETTINGS.morphMs * 0.6 });
+  }
+  render();
+}
+document.getElementById("lay-map").onclick = () => setLayout("map");
+document.getElementById("lay-pyramid").onclick = () => setLayout("pyramid");
+document.getElementById("lay-urban").onclick = () => setLayout("urban");
+document.getElementById("lay-stand").onclick = () => setLayout("stand");
+document.getElementById("lay-draw").onclick = () => setLayout("draw");
+document.getElementById("lay-explore").onclick = () => setLayout("explore");
+
+// ===================== EXPLORE (step 6) =====================
+state.filter = { groups: new Set([0, 1, 2, 3, 4, 5]), sex: "all", urban: "all", ageMin: 0, ageMax: 17 };
+
+function updateExploreCount() {
+  const shown = state.chunks.reduce((s, c) => s + (c.shown || 0), 0);
+  const total = state.chunks.reduce((s, c) => s + c.count, 0);
+  const ppd = state.index ? state.index.people_per_dot : 10;
+  const f = state.filter;
+  const ages = state.index ? state.index.ages : [];
+  const top = f.ageMax === 17 ? "85+" : ages[f.ageMax].split("-")[1];
+  document.getElementById("ex-age-label").textContent = `${ages[f.ageMin] ? ages[f.ageMin].split("-")[0].replace("+", "") : 0} to ${top}`;
+  document.getElementById("ex-count").textContent = `${shown.toLocaleString()} dots shown, about ${(shown * ppd / 1e6).toFixed(2)} million people (${(100 * shown / Math.max(total, 1)).toFixed(1)}% of everyone)`;
+}
+
+let exploreTimer = null;
+
+function applyFilters() {
+  clearTimeout(exploreTimer);
+  exploreTimer = setTimeout(() => {
+    repaintAll();
+    updateExploreCount();
+  }, 120);
+}
+
+function buildExplore() {
+  const box = document.getElementById("ex-groups");
+  state.index.groups.forEach((name, g) => {
+    const lab = document.createElement("label");
+    lab.innerHTML = `<input type="checkbox" checked data-g="${g}"><span class="sw" style="background:${state.index.group_colours[g]}"></span>${name}`;
+    box.appendChild(lab);
+  });
+  box.querySelectorAll("input").forEach(inp => {
+    inp.onchange = () => {
+      const g = +inp.dataset.g;
+      if (inp.checked) {
+        state.filter.groups.add(g);
+      } else {
+        state.filter.groups.delete(g);
+      }
+      applyFilters();
+    };
+  });
+  for (const id of ["ex-sex", "ex-urban"]) {
+    const seg = document.getElementById(id);
+    seg.querySelectorAll("button").forEach(btn => {
+      btn.onclick = () => {
+        seg.querySelectorAll("button").forEach(b => b.classList.toggle("on", b === btn));
+        state.filter[id === "ex-sex" ? "sex" : "urban"] = btn.dataset.v;
+        applyFilters();
+      };
+    });
+  }
+  const amin = document.getElementById("ex-age-min");
+  const amax = document.getElementById("ex-age-max");
+  amin.oninput = () => {
+    if (+amin.value > +amax.value) {
+      amax.value = amin.value;
+    }
+    state.filter.ageMin = +amin.value;
+    state.filter.ageMax = +amax.value;
+    applyFilters();
+  };
+  amax.oninput = () => {
+    if (+amax.value < +amin.value) {
+      amin.value = amax.value;
+    }
+    state.filter.ageMin = +amin.value;
+    state.filter.ageMax = +amax.value;
+    applyFilters();
+  };
+  document.getElementById("ex-reset").onclick = () => {
+    state.filter = { groups: new Set([0, 1, 2, 3, 4, 5]), sex: "all", urban: "all", ageMin: 0, ageMax: 17 };
+    box.querySelectorAll("input").forEach(inp => {
+      inp.checked = true;
+    });
+    for (const id of ["ex-sex", "ex-urban"]) {
+      document.getElementById(id).querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.v === "all"));
+    }
+    amin.value = 0;
+    amax.value = 17;
+    applyFilters();
+  };
+  const dl = document.getElementById("ex-districts");
+  const find = document.getElementById("ex-find");
+  if (state.income) {
+    for (const d of state.income.districts) {
+      const o = document.createElement("option");
+      o.value = `${d.district}, ${d.state}`;
+      dl.appendChild(o);
+    }
+  }
+  find.onchange = () => {
+    const d = state.income && state.income.districts.find(x => `${x.district}, ${x.state}`.toLowerCase() === find.value.trim().toLowerCase());
+    if (d) {
+      const b = d.bbox;
+      map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: safePadding(SETTINGS.standPadding), duration: 1800, maxZoom: 11 });
+    }
+  };
+  updateExploreCount();
+  document.getElementById("lay-explore").disabled = false;
+}
+
+// ===================== YOU DRAW IT (step 4) =====================
+const DRAW = { W: 420, H: 230, left: 46, right: 410, top: 14, bottom: 196 };
+
+function drawX(rank) {
+  // rank from 0 (poorest) to 159 (richest)
+  return DRAW.left + rank / 159 * (DRAW.right - DRAW.left);
+}
+
+function drawY(v) {
+  return DRAW.bottom - Math.min(v, SETTINGS.drawMax) / SETTINGS.drawMax * (DRAW.bottom - DRAW.top);
+}
+
+function realRanked() {
+  return state.income.districts.slice().sort((a, b) => a.median - b.median);
+}
+
+function resetDraw() {
+  state.guess = new Array(SETTINGS.drawBins).fill(null);
+  state.guess[0] = realRanked()[0].median;
+  state.revealed = false;
+  document.getElementById("draw-show").disabled = true;
+  document.getElementById("draw-result").innerHTML = "";
+  document.getElementById("draw-swarm").classList.add("hidden");
+  document.getElementById("draw-legend").classList.add("hidden");
+  drawChart();
+}
+
+function binCentre(i) {
+  return (i + 0.5) / SETTINGS.drawBins * 159;
+}
+
+function drawChart() {
+  if (!state.guess) {
+    resetDraw();
+    return;
+  }
+  const ranked = realRanked();
+  let svg = "";
+  for (const v of [0, 2000, 4000, 6000, 8000, 10000, 12000, 14000]) {
+    svg += `<line x1="${DRAW.left}" x2="${DRAW.right}" y1="${drawY(v)}" y2="${drawY(v)}" stroke="#25262a"/><text x="${DRAW.left - 6}" y="${drawY(v) + 4}" text-anchor="end">${v / 1000}k</text>`;
+  }
+  svg += `<text x="${DRAW.left}" y="${DRAW.bottom + 16}">poorest district</text><text x="${DRAW.right}" y="${DRAW.bottom + 16}" text-anchor="end">richest district</text>`;
+  svg += `<text x="${(DRAW.left + DRAW.right) / 2}" y="${DRAW.bottom + 30}" text-anchor="middle">160 districts, ranked by median household income (RM a month, 2022)</text>`;
+  if (state.revealed) {
+    const d = ranked.map((r, i) => `${i === 0 ? "M" : "L"}${drawX(i).toFixed(1)},${drawY(r.median).toFixed(1)}`).join("");
+    svg += `<path d="${d}" fill="none" stroke="${SETTINGS.drawReal}" stroke-width="2.5" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"><animate attributeName="stroke-dashoffset" from="1" to="0" dur="1.6s" fill="freeze"/></path>`;
+    const lo = ranked[0];
+    const hi = ranked[ranked.length - 1];
+    svg += `<text x="${drawX(0) + 4}" y="${drawY(lo.median) + 16}">${lo.district} ${fmtRM(lo.median)}</text>`;
+    svg += `<text x="${drawX(159) - 4}" y="${drawY(hi.median) - 8}" text-anchor="end" style="fill:#f0efec">${hi.district} ${fmtRM(hi.median)}</text>`;
+  }
+  const pts = [];
+  state.guess.forEach((v, i) => {
+    if (v !== null) {
+      pts.push(`${drawX(binCentre(i)).toFixed(1)},${drawY(v).toFixed(1)}`);
+    }
+  });
+  if (pts.length > 1) {
+    svg += `<polyline points="${pts.join(" ")}" fill="none" stroke="${SETTINGS.drawGuess}" stroke-width="2.5" stroke-dasharray="${state.revealed ? "5 4" : "none"}" stroke-linejoin="round"/>`;
+  }
+  svg += `<circle cx="${drawX(binCentre(0))}" cy="${drawY(state.guess[0])}" r="4" fill="${SETTINGS.drawGuess}"/>`;
+  if (!state.revealed) {
+    svg += `<rect x="${DRAW.left}" y="${DRAW.top}" width="${DRAW.right - DRAW.left}" height="${DRAW.bottom - DRAW.top}" fill="transparent"/>`;
+  }
+  document.getElementById("draw-plot").innerHTML = svg;
+}
+
+function pointerToGuess(evt) {
+  const svg = document.getElementById("draw-plot");
+  const box = svg.getBoundingClientRect();
+  const x = (evt.clientX - box.left) / box.width * DRAW.W;
+  const y = (evt.clientY - box.top) / box.height * DRAW.H;
+  const rank = (x - DRAW.left) / (DRAW.right - DRAW.left) * 159;
+  const bin = Math.max(1, Math.min(SETTINGS.drawBins - 1, Math.floor(rank / 159 * SETTINGS.drawBins)));
+  const v = Math.max(0, Math.min(SETTINGS.drawMax, (DRAW.bottom - y) / (DRAW.bottom - DRAW.top) * SETTINGS.drawMax));
+  if (state.lastBin !== undefined && state.lastBin !== null && Math.abs(bin - state.lastBin) > 1) {
+    // fill the bins skipped by a fast drag
+    const from = state.lastBin;
+    const vFrom = state.guess[from];
+    const stepDir = bin > from ? 1 : -1;
+    for (let i = from + stepDir; i !== bin; i += stepDir) {
+      const f = (i - from) / (bin - from);
+      state.guess[i] = vFrom + (v - vFrom) * f;
+    }
+  }
+  state.guess[bin] = v;
+  state.lastBin = bin;
+  const filled = state.guess.filter(g => g !== null).length / SETTINGS.drawBins;
+  document.getElementById("draw-show").disabled = filled < SETTINGS.drawNeeded;
+  drawChart();
+}
+
+function revealDraw() {
+  state.revealed = true;
+  const ranked = realRanked();
+  let err = 0;
+  let n = 0;
+  state.guess.forEach((v, i) => {
+    if (v !== null && i > 0) {
+      const a = Math.floor(i / SETTINGS.drawBins * 160);
+      const b = Math.floor((i + 1) / SETTINGS.drawBins * 160);
+      const real = ranked.slice(a, b).reduce((s, r) => s + r.median, 0) / (b - a);
+      err += Math.abs(v - real);
+      n += 1;
+    }
+  });
+  const lo = ranked[0];
+  const hi = ranked[ranked.length - 1];
+  const mid = ranked[79];
+  const lastGuess = state.guess.filter(g => g !== null).pop();
+  document.getElementById("draw-result").innerHTML = `Your line was off by about <b>${fmtRM(err / Math.max(n, 1))}</b> a month on average. The richest district, <b>${hi.district}</b> (${hi.state}), has a median of ${fmtRM(hi.median)}: <b>${(hi.median / lo.median).toFixed(1)} times</b> that of ${lo.district} (${lo.state}). You drew the top at ${fmtRM(lastGuess)}. Most districts sit close together around ${fmtRM(mid.median)}; the curve only climbs steeply at the very end.`;
+  document.getElementById("draw-show").disabled = true;
+  drawChart();
+  drawSwarm();
+}
+
+function isBorneo(st) {
+  return st === "Sabah" || st === "Sarawak" || st === "W.P. Labuan";
+}
+
+function drawSwarm() {
+  const W = 420;
+  const H = 150;
+  const left = 14;
+  const right = 406;
+  const mid = 70;
+  const r = 3.6;
+  const lo = 2000;
+  const hi = 13000;
+  const sx = v => left + (v - lo) / (hi - lo) * (right - left);
+  const placed = [];
+  let svg = "";
+  for (const d of realRanked()) {
+    const x = sx(d.median);
+    let y = mid;
+    for (let k = 0; k < 60; k++) {
+      const off = Math.ceil(k / 2) * (2 * r + 0.6) * (k % 2 ? -1 : 1);
+      const yy = mid + off;
+      if (!placed.some(p => (p.x - x) ** 2 + (p.y - yy) ** 2 < (2 * r + 0.6) ** 2)) {
+        y = yy;
+        break;
+      }
+    }
+    placed.push({ x, y });
+    const c = isBorneo(d.state) ? SETTINGS.swarmColours.borneo : SETTINGS.swarmColours.peninsula;
+    svg += `<circle class="sw-dot" data-key="${d.state}|${d.district}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="${c}"><title>${d.district}, ${d.state}: ${fmtRM(d.median)}</title></circle>`;
+  }
+  for (const tick of [2000, 4000, 6000, 8000, 10000, 12000]) {
+    svg += `<text x="${sx(tick)}" y="${H - 6}" text-anchor="middle">${tick / 1000}k</text>`;
+  }
+  const el = document.getElementById("draw-swarm");
+  el.innerHTML = svg;
+  el.classList.remove("hidden");
+  el.querySelectorAll(".sw-dot").forEach(dot => {
+    dot.style.cursor = "pointer";
+    dot.onclick = () => {
+      const d = state.income.districts.find(x => x.state + "|" + x.district === dot.dataset.key);
+      const b = d.bbox;
+      map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: safePadding(SETTINGS.standPadding), duration: 1800, maxZoom: 11 });
+    };
+  });
+  const leg = document.getElementById("draw-legend");
+  leg.innerHTML = `Each dot is one district's median household income (RM a month, 2022). <span style="color:${SETTINGS.swarmColours.peninsula}">&#9679;</span> Peninsular Malaysia &nbsp; <span style="color:${SETTINGS.swarmColours.borneo}">&#9679;</span> Sabah, Sarawak and Labuan. Click a dot to see the district on the map.`;
+  leg.classList.remove("hidden");
+}
+
+function buildDraw() {
+  const svg = document.getElementById("draw-plot");
+  svg.addEventListener("pointerdown", e => {
+    if (state.revealed) {
+      return;
+    }
+    e.preventDefault();
+    state.drawing = true;
+    state.lastBin = null;
+    svg.setPointerCapture(e.pointerId);
+    pointerToGuess(e);
+  });
+  svg.addEventListener("pointermove", e => {
+    if (state.drawing) {
+      pointerToGuess(e);
+    }
+  });
+  svg.addEventListener("pointerup", () => {
+    state.drawing = false;
+  });
+  document.getElementById("draw-show").onclick = revealDraw;
+  document.getElementById("draw-reset").onclick = resetDraw;
+  resetDraw();
+  document.getElementById("lay-draw").disabled = false;
+}
+
+// ===================== WHERE DO YOU STAND? (step 5) =====================
+const fmtRM = v => "RM " + Math.round(v).toLocaleString();
+
+function sliderToIncome(v) {
+  const [a, b] = SETTINGS.standRange;
+  return Math.round(Math.exp(Math.log(a) + (Math.log(b) - Math.log(a)) * v / 1000) / 50) * 50;
+}
+
+function incomeToSlider(x) {
+  const [a, b] = SETTINGS.standRange;
+  const c = Math.min(b, Math.max(a, x));
+  return Math.round((Math.log(c) - Math.log(a)) / (Math.log(b) - Math.log(a)) * 1000);
+}
+
+function shareBelow(st, x) {
+  // share of households in the state earning less than x, from the published percentile ranges
+  for (let i = 0; i < 100; i++) {
+    if (x < st.lo[i]) {
+      return i;
+    }
+    if (x <= st.hi[i]) {
+      const span = st.hi[i] - st.lo[i];
+      return i + (span > 0 ? (x - st.lo[i]) / span : 0.5);
+    }
+  }
+  return 100;
+}
+
+function buildStand() {
+  const sel = document.getElementById("stand-district");
+  const byState = {};
+  for (const d of state.income.districts) {
+    if (!byState[d.state]) {
+      byState[d.state] = [];
+    }
+    byState[d.state].push(d);
+  }
+  for (const st of Object.keys(byState).sort()) {
+    const og = document.createElement("optgroup");
+    og.label = st;
+    for (const d of byState[st]) {
+      const o = document.createElement("option");
+      o.value = d.state + "|" + d.district;
+      o.textContent = d.district;
+      og.appendChild(o);
+    }
+    sel.appendChild(og);
+  }
+  sel.value = SETTINGS.standDefault;
+  document.getElementById("stand-income").value = SETTINGS.standIncome;
+  document.getElementById("stand-slider").value = incomeToSlider(SETTINGS.standIncome);
+  sel.onchange = () => updateStand(true);
+  document.getElementById("stand-income").oninput = e => {
+    document.getElementById("stand-slider").value = incomeToSlider(+e.target.value);
+    updateStand(false);
+  };
+  document.getElementById("stand-slider").oninput = e => {
+    document.getElementById("stand-income").value = sliderToIncome(+e.target.value);
+    updateStand(false);
+  };
+  document.getElementById("lay-stand").disabled = false;
+}
+
+function updateStand(fly) {
+  if (!state.income) {
+    return;
+  }
+  const key = document.getElementById("stand-district").value;
+  const d = state.income.districts.find(x => x.state + "|" + x.district === key);
+  const st = state.income.states[d.state];
+  const x = Math.max(0, +document.getElementById("stand-income").value || 0);
+  const below = shareBelow(st, x);
+  let text;
+  if (below < 1) {
+    text = `A household earning <b>${fmtRM(x)}</b> a month earns less than almost all households in ${d.state}.`;
+  } else if (below >= 99) {
+    text = `A household earning <b>${fmtRM(x)}</b> a month is in the <b>top 1%</b> of households in ${d.state}.`;
+  } else {
+    text = `A household earning <b>${fmtRM(x)}</b> a month earns more than about <b>${Math.round(below)}%</b> of households in ${d.state}.`;
+  }
+  document.getElementById("stand-result").innerHTML = text;
+  const rel = x >= d.median ? "above" : "below";
+  document.getElementById("stand-context").innerHTML = `Half the households in ${d.district} earn less than ${fmtRM(d.median)} (district median); yours is ${rel} it. State median: ${fmtRM(st.med[49])}. Poverty rate in ${d.district}: ${d.poverty.toFixed(1)}%.`;
+  drawStand(st, x, below, d);
+  if (fly) {
+    const b = d.bbox;
+    map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: safePadding(SETTINGS.standPadding), duration: 1800, maxZoom: 11 });
+  }
+}
+
+function drawStand(st, x, below, d) {
+  const W = 420;
+  const H = 190;
+  const left = 10;
+  const right = W - 10;
+  const base = H - 28;
+  const [a, b] = SETTINGS.standRange;
+  const sx = v => left + (Math.log(Math.min(b, Math.max(a, v))) - Math.log(a)) / (Math.log(b) - Math.log(a)) * (right - left);
+  const r = 4;
+  const step = 2 * r + 1;
+  const stacks = {};
+  let svg = "";
+  for (let i = 0; i < 100; i++) {
+    const col = Math.round((sx(st.med[i]) - left) / step);
+    const h = stacks[col] || 0;
+    stacks[col] = h + 1;
+    const cx = left + col * step + r;
+    const cy = base - r - h * step;
+    const fill = i < Math.floor(below) ? SETTINGS.standBelow : SETTINGS.standAbove;
+    svg += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${fill}"><title>${i + 1}th hundredth: ${fmtRM(st.lo[i])} to ${fmtRM(st.hi[i])}</title></circle>`;
+  }
+  svg += `<line x1="${left}" x2="${right}" y1="${base + 1}" y2="${base + 1}" stroke="#3a3b40"/>`;
+  for (const tick of [1000, 2000, 5000, 10000, 20000, 50000, 100000]) {
+    svg += `<line x1="${sx(tick)}" x2="${sx(tick)}" y1="${base + 1}" y2="${base + 5}" stroke="#3a3b40"/><text x="${sx(tick)}" y="${base + 17}" text-anchor="middle">${tick >= 1000 ? tick / 1000 + "k" : tick}</text>`;
+  }
+  const mx = sx(d.median);
+  svg += `<line x1="${mx}" x2="${mx}" y1="${base}" y2="${base - 118}" stroke="#8d8c85" stroke-dasharray="3 3"/><text x="${mx + 4}" y="${base - 110}">${d.district} median</text>`;
+  const ux = sx(x);
+  svg += `<line x1="${ux}" x2="${ux}" y1="${base}" y2="18" stroke="${SETTINGS.standBelow}" stroke-width="2"/><text x="${ux}" y="12" text-anchor="middle" style="fill:${SETTINGS.standBelow};font-weight:600">you</text>`;
+  document.getElementById("stand-plot").innerHTML = svg;
+}
+
+function buildLegend() {
+  const ul = document.getElementById("legend");
+  ul.innerHTML = "";
+  state.index.groups.forEach((name, g) => {
+    const li = document.createElement("li");
+    li.innerHTML = `<span class="sw" style="background:${state.index.group_colours[g]}"></span><span>${name}</span><span class="n">${(state.index.group_people[g] / 1e6).toFixed(2)} m</span>`;
+    li.onclick = () => {
+      const allOthersHidden = state.hidden.size === state.index.groups.length - 1 && !state.hidden.has(g);
+      if (allOthersHidden) {
+        state.hidden.clear();
+      } else {
+        state.hidden = new Set(state.index.groups.map((_, i) => i).filter(i => i !== g));
+      }
+      [...ul.children].forEach((el, i) => el.classList.toggle("dim", state.hidden.has(i)));
+      repaintAll();
+    };
+    ul.appendChild(li);
+  });
+}
+
+function setHidden(list) {
+  // show only the listed groups in colour (an empty list shows them all)
+  state.hidden = new Set(list.length ? state.index.groups.map((_, i) => i).filter(i => !list.includes(i)) : []);
+  [...document.getElementById("legend").children].forEach((el, i) => el.classList.toggle("dim", state.hidden.has(i)));
+}
+
+function setMode(mode) {
+  state.mode = mode;
+  document.getElementById("mode-all").classList.toggle("on", mode === "all");
+  document.getElementById("mode-group").classList.toggle("on", mode === "group");
+  document.getElementById("legend").classList.toggle("hidden", mode !== "group");
+  repaintAll();
+}
+map.on("zoom", render);
+map.on("moveend", render);
+document.getElementById("mode-all").onclick = () => setMode("all");
+document.getElementById("mode-group").onclick = () => setMode("group");
+
+function status() {
+  const total = state.index.n_dots;
+  const done = state.loaded >= total;
+  document.getElementById("status").textContent = done ? `${total.toLocaleString()} dots, about ${(total * state.index.people_per_dot / 1e6).toFixed(1)} million people` : `Loading ${state.loaded.toLocaleString()} of ${total.toLocaleString()} dots...`;
+}
+
+// ===================== STORY (scrollytelling frame) =====================
+// Each <section class="step"> says which layout, colour mode and view it wants; the step crossing the middle of the column wins.
+state.step = null;
+
+function storyBounds(name) {
+  if (name === "country") {
+    return state.index ? state.index.bounds : null;
+  }
+  return SETTINGS.storyViews[name] || null;
+}
+
+function applyStep(el) {
+  state.step = el;
+  document.querySelectorAll(".step").forEach(s => s.classList.toggle("active", s === el));
+  const layout = el.dataset.layout;
+  if (!layout || !state.index) {
+    return;
+  }
+  const btn = document.getElementById("lay-" + layout);
+  if (btn.disabled) {
+    setTimeout(() => {
+      if (state.step === el) {
+        applyStep(el);
+      }
+    }, 500);
+    return;
+  }
+  const only = el.dataset.only ? el.dataset.only.split(",").map(Number) : [];
+  const want = only.join(",");
+  const had = [...state.hidden].join(",");
+  const mode = el.dataset.mode || state.mode;
+  if (mode !== state.mode || want !== state.onlyKey || (want === "" && had !== "")) {
+    state.onlyKey = want;
+    setHidden(only);
+    setMode(mode);
+  }
+  setLayout(layout);
+  const b = storyBounds(el.dataset.view);
+  if (b && layout === "map") {
+    map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: safePadding(SETTINGS.fitPadding), duration: SETTINGS.storyFlyMs });
+  }
+}
+
+function buildStory() {
+  const root = document.getElementById("story");
+  const steps = [...root.querySelectorAll(".step[data-layout]")];
+  const watcher = new IntersectionObserver(entries => {
+    entries.filter(e => e.isIntersecting).forEach(e => {
+      if (e.target !== state.step) {
+        applyStep(e.target);
+      }
+    });
+  }, { root: root, rootMargin: SETTINGS.storyTrigger, threshold: 0 });
+  steps.forEach(s => watcher.observe(s));
+  // the layout buttons jump to the first step that uses that layout
+  ["map", "pyramid", "urban", "draw", "stand", "explore"].forEach(l => {
+    document.getElementById("lay-" + l).onclick = () => {
+      const target = steps.find(s => s.dataset.layout === l);
+      const head = document.getElementById("panel").offsetHeight;
+      const mid = root.clientHeight * 0.47;
+      root.scrollTo({ top: Math.max(0, target.offsetTop - Math.max(head + 10, mid - 40)), behavior: "auto" });
+      applyStep(target);
+    };
+  });
+}
+
+async function loadIncome() {
+  state.income = await (await fetch(SETTINGS.dataDir + "income.json")).json();
+  buildStand();
+  buildDraw();
+  if (state.exploreWaiting) {
+    buildExplore();
+  }
+}
+
+async function loadPlaces() {
+  state.towns = await (await fetch(SETTINGS.dataDir + "towns.json")).json();
+  render();
+  state.areas = await (await fetch(SETTINGS.dataDir + "areas.geojson")).json();
+  render();
+}
+
+async function load() {
+  loadPlaces();
+  loadIncome();
+  const index = await (await fetch(SETTINGS.dataDir + "dots_index.json")).json();
+  state.index = index;
+  groupRgb = index.group_colours.map(hexToRgb);
+  map.fitBounds([[index.bounds[0], index.bounds[1]], [index.bounds[2], index.bounds[3]]], { padding: safePadding(SETTINGS.fitPadding), duration: 0 });
+  buildLegend();
+  status();
+  render();
+  if (state.step) {
+    applyStep(state.step);
+  }
+  for (const ch of index.chunks) {
+    const buf = await (await fetch(SETTINGS.dataDir + ch.file)).arrayBuffer();
+    const n = ch.count;
+    const chunk = { count: n, pos: new Float32Array(buf, 0, n * 2), attr: new Uint8Array(buf, n * 8, n * 4), tmp2: [0, 0], tmp4: [0, 0, 0, 0], targets: {} };
+    chunk.data = { length: n };
+    paint(chunk);
+    state.chunks.push(chunk);
+    state.loaded += n;
+    render();
+    status();
+  }
+  buildCharts();
+  if (state.income) {
+    buildExplore();
+  } else {
+    state.exploreWaiting = true;
+  }
+  window.kitaReady = true;
+}
+buildStory();
+load();
+</script>
+</body>
+</html>
