@@ -1,0 +1,10 @@
+pandas
+geopandas
+pyarrow
+shapely
+h3
+numpy
+requests
+matplotlib
+pillow
+ipykernel
