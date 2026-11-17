@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kita: Malaysia in 3.2 million dots</title>
+<meta name="description" content="A case study of a scrolling story that draws the 32.4 million people counted in Malaysia's 2020 census as 3.24 million dots, turns them into charts, and lets readers test their sense of district incomes against the Household Income Survey 2022.">
+<style>
+/* Fonts are stored next to this page (docs/fonts), both under the SIL Open Font License */
+@font-face { font-family: "Bricolage Grotesque"; src: url("fonts/bricolage-grotesque-latin-600-normal.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "Bricolage Grotesque"; src: url("fonts/bricolage-grotesque-latin-700-normal.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Newsreader"; src: url("fonts/newsreader-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Newsreader"; src: url("fonts/newsreader-latin-400-italic.woff2") format("woff2"); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: "Newsreader"; src: url("fonts/newsreader-latin-600-normal.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+
+:root {
+  --ink: #1d2433;        /* body text */
+  --muted: #5b6474;      /* captions and notes */
+  --sand: #e6d3ab;       /* the dots in the margin, close to the page's "Everyone" dots */
+  --head: #3b3486;       /* headings: ink violet */
+  --blue: #2f6fc4;       /* a deeper version of the page's Malay blue */
+  --orange: #c4501f;     /* a deeper version of the page's Chinese orange */
+  --paper: #ffffff;
+  --rule: #e9e6ef;
+  --sans: "Bricolage Grotesque", "Segoe UI", Helvetica, Arial, sans-serif;
+  --serif: "Newsreader", Georgia, "Times New Roman", serif;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--serif); font-size: 19px; line-height: 1.65; }
+a { color: var(--head); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a:hover { text-decoration-thickness: 2px; }
+a:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; border-radius: 2px; }
+
+/* ---------- Opening ---------- */
+.opening { max-width: 1080px; margin: 0 auto; padding: 56px 24px 24px; display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 48px; align-items: start; }
+.opening h1 { font-family: var(--sans); font-weight: 700; font-size: 3.2rem; line-height: 1.05; letter-spacing: -0.02em; margin: 0 0 20px; color: var(--head); }
+.standfirst { font-size: 1.25rem; line-height: 1.5; margin: 0 0 24px; max-width: 34em; }
+.byline { font-family: var(--sans); font-weight: 600; font-size: 0.95rem; color: var(--muted); margin: 0 0 16px; }
+.links { list-style: none; margin: 0; padding: 0; font-family: var(--sans); font-weight: 600; font-size: 0.95rem; }
+.links li { margin: 6px 0; }
+.lead { margin: 0; }
+.lead img { display: block; width: 100%; height: auto; border: 1px solid var(--rule); }
+figcaption { font-size: 0.85rem; line-height: 1.45; color: var(--muted); margin-top: 8px; font-style: italic; }
+
+/* ---------- The margin: a column of sand-coloured dots, like the dots on the map ---------- */
+.line { max-width: 1080px; margin: 0 auto; padding: 8px 24px 64px; }
+.line-inner { position: relative; padding-left: 64px; max-width: 800px; margin-left: -64px; }   /* the dots sit in the margin, so text lines up with the title */
+.line-inner::before {
+  content: ""; position: absolute; left: 10px; top: 18px; bottom: 30px; width: 14px;
+  background: radial-gradient(circle, var(--sand) 3.3px, transparent 3.8px) center top / 14px 15px repeat-y;
+}
+section { position: relative; margin-top: 48px; }
+h2 { font-family: var(--sans); font-weight: 700; font-size: 1.6rem; line-height: 1.2; color: var(--head); margin: 0 0 12px; }
+h2::before { /* each section: three dots gathering */
+  content: ""; position: absolute; left: -63px; top: 0; width: 32px; height: 28px;
+  background:
+    radial-gradient(circle at 9px 19px, var(--head) 5.5px, transparent 6px),
+    radial-gradient(circle at 23px 19px, var(--head) 5.5px, transparent 6px),
+    radial-gradient(circle at 16px 7px, var(--head) 5.5px, transparent 6px),
+    var(--paper);
+}
+h3 { font-family: var(--sans); font-weight: 600; font-size: 1.15rem; line-height: 1.3; margin: 32px 0 6px; position: relative; color: var(--ink); }
+h3::before { /* a single dot for each finding */
+  content: ""; position: absolute; left: -53px; top: 5px; width: 13px; height: 13px;
+  border-radius: 50%; background: var(--head); box-shadow: 0 0 0 4px var(--paper);
+}
+h3.blue::before { background: var(--blue); }
+h3.orange::before { background: var(--orange); }
+p { margin: 0 0 14px; max-width: 40em; }
+.figure-line { font-family: var(--sans); margin: 4px 0 10px; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.figure-line b { font-weight: 700; font-size: 2rem; line-height: 1; color: var(--head); }
+.figure-line.blue b { color: var(--blue); }
+.figure-line.orange b { color: var(--orange); }
+.figure-line span { font-weight: 600; font-size: 0.95rem; color: var(--muted); }
+ul.plain { margin: 0 0 14px; padding-left: 1.1em; max-width: 40em; }
+ul.plain li { margin: 6px 0; }
+.wide { margin: 18px 0 8px; }
+.wide img { display: block; width: 100%; height: auto; border: 1px solid var(--rule); }
+.wide.chart a { display: block; cursor: zoom-in; }
+table { border-collapse: collapse; font-family: var(--sans); font-size: 0.92rem; margin: 8px 0 16px; }
+th, td { text-align: left; padding: 6px 18px 6px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-weight: 600; color: var(--muted); }
+td.num { text-align: right; font-variant-numeric: tabular-nums; padding-right: 0; padding-left: 18px; }
+td.num.hi { color: var(--head); font-weight: 700; }
+.table-wrap { overflow-x: auto; max-width: 100%; }
+.terminus { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--rule); font-size: 0.9rem; color: var(--muted); }
+
+/* ---------- Chart pop-out: a click opens the chart over the page, a click or Esc closes it ---------- */
+#zoom { position: fixed; inset: 0; z-index: 50; background: rgba(20, 18, 34, 0.82); display: none; align-items: center; justify-content: center; padding: 24px; cursor: zoom-out; }
+#zoom.on { display: flex; }
+#zoom img { max-width: 100%; max-height: 100%; background: #fff; border-radius: 4px; box-shadow: 0 6px 30px rgba(0,0,0,0.5); }
+#zoom .close { position: absolute; top: 14px; right: 18px; font-family: var(--sans); font-weight: 600; font-size: 0.95rem; color: #fff; background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.5); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+
+/* ---------- Narrow screens ---------- */
+@media (max-width: 900px) {
+  .opening { grid-template-columns: 1fr; gap: 28px; padding-top: 32px; }
+  .opening h1 { font-size: 2.4rem; }
+  .lead { max-width: 420px; }
+  .line-inner { margin-left: 0; }
+}
+@media (max-width: 560px) {
+  body { font-size: 17px; }
+  .opening, .line { padding-left: 16px; padding-right: 16px; }
+  .line-inner { padding-left: 36px; }
+  .line-inner::before { left: 2px; width: 10px; background-size: 10px 12px; background-image: radial-gradient(circle, var(--sand) 2.5px, transparent 3px); }
+  h2::before { left: -40px; transform: scale(0.72); transform-origin: left top; }
+  h3::before { left: -32px; width: 10px; height: 10px; top: 6px; }
+  table { font-size: 0.85rem; }
+  th, td { padding-right: 10px; }
+}
+
+/* ---------- PDF and printing ---------- */
+@page { size: A4; margin: 16mm 15mm 16mm 15mm; }
+@media print {
+  #zoom { display: none !important; }
+  body { font-size: 10pt; line-height: 1.4; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  a { color: var(--ink); text-decoration: none; }
+  .opening { grid-template-columns: minmax(0, 1fr) 72mm; gap: 8mm; padding: 0 0 4mm; max-width: none; }
+  .opening h1 { font-size: 26pt; }
+  .standfirst { font-size: 12.5pt; }
+  .web-link { display: none; }
+  .line { padding: 0; max-width: none; }
+  .line-inner { max-width: none; margin-left: 0; }
+  section { margin-top: 4mm; }
+  p, ul.plain li { orphans: 3; widows: 3; }
+  h2 { font-size: 15pt; break-after: avoid; }
+  h3 { font-size: 11.5pt; margin-top: 4mm; break-after: avoid; }
+  .figure-line b { font-size: 17pt; }
+  .wide { break-inside: avoid; }
+  .wide img { max-height: 60mm; width: auto; max-width: 100%; }
+  .wide.chart img { max-height: 62mm; width: 100%; height: auto; }
+  tr:first-child { break-after: avoid; }
+  table { break-inside: avoid; font-size: 8.4pt; margin: 1mm 0 3mm; }
+  table.list { break-inside: auto; }
+  tr { break-inside: avoid; }
+  .figure-line { break-inside: avoid; }
+  .table-wrap { overflow: visible; }   /* a scrolling box cannot be split across pages */
+  th, td { padding: 1mm 4mm 1mm 0; }
+  td.num { padding-left: 5mm; }
+  .figure-line span { font-size: 9pt; }
+  .terminus { margin-top: 4mm; padding-top: 2mm; font-size: 8.5pt; }
+  .links a[href^="http"]::after { content: " (" attr(href) ")"; font-weight: 400; color: var(--muted); }
+}
+</style>
+</head>
+<body>
+
+<header class="opening">
+  <div>
+    <h1>Kita: Malaysia in 3.2 million dots</h1>
+    <p class="standfirst">The 2020 census counted 32.4 million people in Malaysia. This project draws every ten of them as one dot, placed where they live, then lets the dots leave the map to form an age pyramid and urban and rural blocks. Two interactive steps ask the reader to guess how district incomes are spread and to place their own household among the incomes in their state.</p>
+    <p class="byline">Lik Ren Tai, November 2026</p>
+    <ul class="links">
+      <li><a href="https://likrentai.github.io/kita/">Open the story</a></li>
+      <li><a href="https://github.com/likrentai/kita">Code, notebooks and data notes on GitHub</a></li>
+      <li class="web-link"><a href="case-study.pdf">Download this case study as a PDF</a></li>
+    </ul>
+  </div>
+  <figure class="lead">
+    <img src="images/cs_lead.jpg" width="800" height="450" alt="The Klang Valley drawn in tens of thousands of small coloured dots on a black background: orange clusters around central Kuala Lumpur, blue across Shah Alam, Selayang and Kajang, a yellow-green patch south of Klang, with town names in small dark labels">
+    <figcaption>The Klang Valley by group: Malay dots in blue, Chinese in orange, Indian in yellow-green, Other Bumiputera in green, Non-citizens in pale sand. Each dot is ten people.</figcaption>
+  </figure>
+</header>
+
+<main class="line">
+<div class="line-inner">
+
+<section>
+  <h2>The question</h2>
+  <p>Census tables say how many people live in each place and who they are, but tables are hard to feel. A dot for every ten people shows at a glance where the country is crowded and where it is almost empty, and how the mix of people changes from one place to the next. Moving the same dots into charts keeps the link between the map and the numbers: the dots that form the age pyramid are the same people who were on the map a moment before.</p>
+  <p>Income is where people's sense of their country is often least accurate. So the story asks the reader to draw how district incomes rise before showing the real curve, and then to type in their own household income and see how many households in their state earn less.</p>
+</section>
+
+<section>
+  <h2>The data</h2>
+  <div class="table-wrap"><table class="list">
+    <tr><th>What</th><th>Source</th><th>Used for</th></tr>
+    <tr><td>Census 2020 by state constituency, parliamentary seat and district, with boundaries</td><td>Department of Statistics Malaysia (DOSM), open data on GitHub</td><td>How many people live in each of 613 small areas, and their group, sex, age and urban or rural mix</td></tr>
+    <tr><td>Population by district, sex, age and group</td><td>OpenDOSM</td><td>The sex and age mix within each group</td></tr>
+    <tr><td>Household Income Survey 2022 (and 2024 for comparison)</td><td>OpenDOSM</td><td>District medians, state percentiles, Gini and poverty rates</td></tr>
+    <tr><td>Population grid, 400 m hexagons (2023)</td><td>Kontur, on the Humanitarian Data Exchange</td><td>Where dots fall inside each small area</td></tr>
+    <tr><td>Base map</td><td>CARTO Dark Matter, from OpenStreetMap data</td><td>The dark background</td></tr>
+  </table></div>
+  <p>The census totals come only from DOSM. The Kontur grid decides where inside each area the dots fall, never how many there are.</p>
+</section>
+
+<section>
+  <h2>One story, five notebooks</h2>
+  <p>The page is a single scrolling story. A column of text on the left moves the map and the charts on the right, and buttons at the top jump to any part. On a phone the story sits in a sheet at the bottom of the screen.</p>
+  <div class="table-wrap"><table class="list">
+    <tr><th>Step</th><th>What the reader sees</th></tr>
+    <tr><td>1 The country in dots</td><td>3.24 million dots, then the Klang Valley and Borneo up close. Pointing at any area shows its census numbers.</td></tr>
+    <tr><td>2 Who lives where</td><td>The dots coloured by six census groups; one group can be shown alone.</td></tr>
+    <tr><td>3 The dots leave the map</td><td>Every dot flies into an age pyramid, then into urban and rural blocks, and back.</td></tr>
+    <tr><td>4 First, a guess</td><td>The reader draws how the 160 district median incomes rise, then sees the real curve and a beeswarm of all districts.</td></tr>
+    <tr><td>5 Where do you stand?</td><td>A district and a monthly household income place the reader among 100 dots, one for each hundredth of the state's households.</td></tr>
+    <tr><td>6 Explore</td><td>Filters by group, sex, urban or rural and age, and a search for any district.</td></tr>
+  </table></div>
+  <p>Five Python notebooks prepare the data: 00 checks every source, 01 places the dots, 02 writes them for the web, 03 adds town names and the small areas, and 04 prepares the income data. The page runs on MapLibre GL JS and deck.gl, and the graphics card moves all 3.24 million dots at once.</p>
+  <figure class="wide">
+    <img src="images/cs_pages.jpg" width="1612" height="760" alt="Left: the story page with its text column and an age pyramid of coloured bars, men to the left and women to the right, widest in the 20s and 30s. Right: the 'Where do you stand?' card over a map of sand-coloured dots, showing that RM 5,000 a month earns more than about 12% of households in Kuala Lumpur, with 100 dots spread along an income scale">
+    <figcaption>Left: step 3, every dot moved into an age pyramid. Right: step 5, RM 5,000 a month placed among the households of Kuala Lumpur.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>What the dots show</h2>
+
+  <h3>Half of everyone lives on 2% of the land</h3>
+  <div class="figure-line"><b>2.1%</b><span>of the land holds half of the people, in the 191 densest of the 613 small areas</span></div>
+  <p>The bright band runs down the west coast of the peninsula, from Alor Setar through Penang, Ipoh and Kuala Lumpur to Johor Bahru. The Klang Valley alone (Selangor, Kuala Lumpur and Putrajaya) holds 28% of the people on 2.5% of the land, about 9 million people. Across the South China Sea the balance is reversed: Sabah, Sarawak and Labuan cover 60% of the land but hold 18% of the people, mostly along the coast and the big rivers.</p>
+  <figure class="wide chart">
+    <a href="images/cs_land.png" title="Enlarge the chart"><img src="images/cs_land.png" width="1560" height="620" alt="Paired bars of people and land: the 191 densest constituencies hold 50% of the people on 2.1% of the land; the Klang Valley 28% of the people on 2.5% of the land; Sabah, Sarawak and Labuan 18% of the people on 60% of the land"></a>
+    <figcaption>Share of the people (violet) and of the land (sand) for three parts of the country. <span class="web-link">Click a chart to enlarge it; click again or press Esc to close.</span></figcaption>
+  </figure>
+
+  <h3 class="blue">Six groups, and where they live</h3>
+  <div class="figure-line blue"><b>52%</b><span>Malay, with Chinese 21%, Other Bumiputera 11%, Indian 6%, Other citizens under 1% and Non-citizens 8%</span></div>
+  <p>Malay dots fill most of the peninsula's north and east. In Sabah, Sarawak and Labuan the largest group is Other Bumiputera, 55% of the dots there. Chinese and Indian dots gather in the west coast towns. In the Klang Valley the colours mix, but the mix still changes clearly from one constituency to the next. Non-citizens are 2.7 million people, 8% of everyone, but about 24% of Sabah's 3.4 million. The census counts everyone living in the country, so the story says "people", not "Malaysians", for its totals.</p>
+
+  <h3>A young country, three quarters urban</h3>
+  <div class="figure-line"><b>24%</b><span>of everyone is under 15, against 6.7% aged 65 and over</span></div>
+  <p>Lined up by age, the widest five-year bands are people aged 25 to 34, about 2.9 million in each. The base of the pyramid is narrower than its middle: fewer babies are born now than a generation ago. Three in four people, 24.4 million, live in urban areas and 8.1 million in rural ones.</p>
+
+  <h3 class="orange">District incomes: a long flat middle and a steep top</h3>
+  <div class="figure-line orange"><b>5.4 times</b><span>the median household income of Sepang (RM 12,608 a month) against Pitas (RM 2,329), in 2022</span></div>
+  <p>Most districts sit close together. The middle district's median is RM 4,199, and 107 of the 160 districts have medians below RM 5,000. Only ten reach RM 8,000 or more, and eight of those ten are in the Klang Valley. A straight line from the poorest district to the richest misses this shape: the curve stays low and flat for most of the way and climbs steeply only at the very end.</p>
+  <p>The 2024 survey shows the same shape, a little higher. Its 162 districts run from RM 2,525 (Pantu, Sarawak) to RM 11,404 (Ulu Langat, Selangor), and the middle of the ranking is at about RM 4,590. Of the 150 districts with the same name in both surveys, 135 had a higher median in 2024; the typical rise was 8.9%, in ringgit of the day, not adjusted for prices.</p>
+  <figure class="wide chart">
+    <a href="images/cs_income.png" title="Enlarge the chart"><img src="images/cs_income.png" width="1560" height="620" alt="District median household incomes ranked from poorest to richest for 2022 (violet line) and 2024 (orange dashed line): both stay between about RM 2,500 and RM 6,000 for most districts and rise steeply only among the richest few, reaching RM 12,608 at Sepang in 2022 and RM 11,404 in 2024"></a>
+    <figcaption>District median household incomes, each year ranked from poorest to richest. Household Income Survey 2022 and 2024 (DOSM).</figcaption>
+  </figure>
+
+  <h3>The same income, very different places</h3>
+  <div class="figure-line"><b>12% or 55%</b><span>of households earn less than RM 5,000 a month: in Kuala Lumpur, and in Sabah</span></div>
+  <p>A household earning RM 5,000 a month is below the middle in Kuala Lumpur, where half the households earn more than RM 10,000, but above the middle in Sabah. The "Where do you stand?" step shows this with 100 dots, one for each hundredth of the state's households, placed at that hundredth's income. Percentiles are published for states, not districts, so the comparison is always with the whole state.</p>
+</section>
+
+<section>
+  <h2>How the dots are placed</h2>
+  <p>Each of the 613 small areas (600 state constituencies and the 13 parliamentary seats of the Federal Territories) gets one dot for every ten of its people, with remainders rounded so the national total is exact. Inside the area, dots go to the Kontur hexagons in proportion to their population, and each dot lands at a random point inside its hexagon. Where Kontur holds less than half of an area's census people (Putrajaya and Putatan), the missing people are spread evenly over the area. Each area's group counts are then shuffled among its dots; Bumiputera dots are split into Malay and Other Bumiputera with their district's share, and sex and age come from the district's table for that group. Each district's urban count is given to its densest cells first, and the rest are rural. The dots are written for the web as eight binary files of about 4.9 MB each, which the page streams in as it loads.</p>
+</section>
+
+<section>
+  <h2>Problems in the data, and how they were handled</h2>
+  <ul class="plain">
+    <li><b>Constituencies that cross district lines.</b> People are counted by state constituency, but incomes and the age mix are published by district, and the two do not nest. District totals rebuilt from the dots are close (median difference 0.9%) but a few districts are far off, such as Selangau in Sarawak. Totals on the page always come from the census tables, not from counting dots.</li>
+    <li><b>Mixes that were missing.</b> Some district and group pairs had no published sex and age mix. These fall back to the state mix, and then to the national one.</li>
+    <li><b>Names that did not match.</b> "Larut dan Matang" in the census is "Larut Dan Matang" in the boundary file; names are compared in lower case.</li>
+    <li><b>Too many dots for the whole country.</b> At the national view, 3.24 million dots merge into a solid glow whatever their opacity. Below a set zoom the page shows pre-drawn density images instead, and cross-fades to live dots as the reader zooms in.</li>
+    <li><b>Two groups that looked alike.</b> In the first palette, Chinese and Non-citizens were hard to tell apart on the dark map. The six colours were replaced with a set checked for separation under the common forms of colour blindness.</li>
+    <li><b>Moving 3.24 million dots smoothly.</b> The fastest way to load the dots into deck.gl cannot animate them, so positions are read through small accessor functions that let the graphics card fly every dot between the map and each chart.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Limits</h2>
+  <p>Dots are modelled positions, not addresses. Within each small area the groups, ages and sexes are scattered at random among its dots, so the map shows differences between areas, never between streets or households. Sex and age by group are published by district, so they follow the district mix, and urban or rural is a modelled split of each district's urban count, densest places first. The Kontur grid is a 2023 estimate used only for placement; where it is wrong, dots sit in the wrong part of an area but the area's total stays right. The income figures are from 2022, before the most recent rises, and the state percentiles describe the spread of incomes, not the survey's uncertainty, which is not published.</p>
+</section>
+
+<section>
+  <h2>Where this could be useful</h2>
+  <ul class="plain">
+    <li><b>Explaining a census:</b> a picture of where people live and who they are that a general reader can take in at once, with the exact numbers one point away.</li>
+    <li><b>Social and market analysis:</b> filtering the dots by age, group and urban or rural to see where a population of interest, such as older people in rural areas, actually lives.</li>
+    <li><b>Talking about income:</b> the drawing step and the household step test what readers believe before showing the data, which makes the shape of the income curve harder to forget.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>About</h2>
+  <p>Lik Ren Tai applies data science in two fields: environmental science and railway systems. This project was built with Python (pandas, GeoPandas, h3, NumPy, Pillow, matplotlib), MapLibre GL JS and deck.gl.</p>
+  <p class="terminus">Census 2020 and boundaries: Department of Statistics Malaysia (DOSM), dosm-malaysia/data-open on GitHub. Population by district and Household Income Survey 2022 and 2024: OpenDOSM (CC BY 4.0). Population grid: Kontur Population, via the Humanitarian Data Exchange (CC BY 4.0). Base map: © CARTO, © OpenStreetMap contributors. This is an independent project, not affiliated with or endorsed by any of the sources.</p>
+</section>
+
+</div>
+</main>
+<div id="zoom" role="dialog" aria-label="Enlarged chart"><button class="close" type="button">Close</button><img alt=""></div>
+<script>
+(function () {
+  const box = document.getElementById("zoom");
+  const big = box.querySelector("img");
+  function close() { box.classList.remove("on"); big.removeAttribute("src"); }
+  document.querySelectorAll(".wide.chart a").forEach(function (a) {
+    a.addEventListener("click", function (e) {
+      e.preventDefault();
+      big.src = a.getAttribute("href");
+      big.alt = a.querySelector("img").alt;
+      box.classList.add("on");
+    });
+  });
+  box.addEventListener("click", close);
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") close(); });
+})();
+</script>
+</body>
+</html>
