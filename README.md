@@ -2,6 +2,8 @@
 
 **Live page: https://likrentai.github.io/kita/**
 
+**Case study: https://likrentai.github.io/kita/case-study.html** ([PDF](https://likrentai.github.io/kita/case-study.pdf))
+
 "Kita" is Malay for "us". The 2020 census counted 32.4 million people living in Malaysia. This page draws them as 3.24 million dots, one for every ten people. Scrolling down the story moves the map and turns the dots into charts.
 
 1. **The country in dots.** Half of everyone lives on about 2% of the land. The Klang Valley holds 28% of the people on 2.5% of the land. Sabah and Sarawak hold 18% of the people on 60% of the land.
@@ -20,7 +22,7 @@ Five notebooks in Python 3.14 build the data. The page itself is plain HTML with
 | Notebook | What it does |
 |---|---|
 | `00datacheck.ipynb` | Downloads every source into `data/raw` and checks totals (32,447,385 people, 160 districts). |
-| `01dots.ipynb` | Places the dots. People are counted for 613 small areas (600 state constituencies and 13 Federal Territory seats). Inside each area, dots fall into the Kontur 400 m hexagons in proportion to their population. Then a random point is picked inside each hexagon. Group, sex, age and urban or rural come from the published tables and are mixed at random among the area's dots. |
+| `01dots.ipynb` | Places the dots. People are counted for 613 small areas (600 state constituencies and 13 Federal Territory seats). Inside each area, dots fall into the Kontur 400 m hexagons in proportion to their population. Then a random point is picked inside each hexagon. Group, sex and age come from the published tables and are mixed at random among the area's dots; each district's urban count goes to its densest places first. |
 | `02builddots.ipynb` | Writes the dots for the web as eight binary chunks (`docs/data/dots_00.bin` to `dots_07.bin`) and draws the whole-country images used below zoom 6.5. |
 | `03buildplaces.ipynb` | Writes the town labels (`docs/data/towns.json`, from the hand-made `data/places/towns.csv`) and the 613 small areas with their census numbers (`docs/data/areas.geojson`). |
 | `04buildincome.ipynb` | Writes district medians and state income percentiles from the Household Income Survey 2022 (`docs/data/income.json`). |
