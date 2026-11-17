@@ -1,0 +1,109 @@
+{
+ "n_dots": 3244738,
+ "people_per_dot": 10,
+ "census_year": 2020,
+ "chunks": [
+  {
+   "file": "dots_00.bin",
+   "count": 405592
+  },
+  {
+   "file": "dots_01.bin",
+   "count": 405592
+  },
+  {
+   "file": "dots_02.bin",
+   "count": 405592
+  },
+  {
+   "file": "dots_03.bin",
+   "count": 405593
+  },
+  {
+   "file": "dots_04.bin",
+   "count": 405592
+  },
+  {
+   "file": "dots_05.bin",
+   "count": 405592
+  },
+  {
+   "file": "dots_06.bin",
+   "count": 405592
+  },
+  {
+   "file": "dots_07.bin",
+   "count": 405593
+  }
+ ],
+ "layout": "per chunk: float32 lon,lat pairs, then uint8 group,sex,age,urban quads",
+ "groups": [
+  "Malay",
+  "Other Bumiputera",
+  "Chinese",
+  "Indian",
+  "Other citizens",
+  "Non-citizens"
+ ],
+ "group_people": [
+  16921810,
+  3727390,
+  6892150,
+  1998810,
+  216190,
+  2691030
+ ],
+ "ages": [
+  "0-4",
+  "5-9",
+  "10-14",
+  "15-19",
+  "20-24",
+  "25-29",
+  "30-34",
+  "35-39",
+  "40-44",
+  "45-49",
+  "50-54",
+  "55-59",
+  "60-64",
+  "65-69",
+  "70-74",
+  "75-79",
+  "80-84",
+  "85+"
+ ],
+ "sex": [
+  "Male",
+  "Female"
+ ],
+ "urban": [
+  "Rural",
+  "Urban"
+ ],
+ "group_colours": [
+  "#3987e5",
+  "#199e70",
+  "#d95926",
+  "#a6d854",
+  "#5ec8e5",
+  "#e8e2d0"
+ ],
+ "bounds": [
+  99.65354919433594,
+  0.8567873239517212,
+  119.26272583007812,
+  7.3872809410095215
+ ],
+ "overview": {
+  "bounds": [
+   99.60354919433594,
+   0.8067873239517211,
+   119.31272583007812,
+   7.437280941009521
+  ],
+  "width": 4389,
+  "height": 1481,
+  "pixel_m": 500
+ }
+}
